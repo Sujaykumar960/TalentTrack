@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>TalentTrack - Profile View</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-black text-white p-10">
+    <div class="max-w-3xl mx-auto bg-zinc-900 p-10 rounded-3xl border border-zinc-800 text-center">
+        <img id="pImg" src="" class="w-32 h-32 rounded-full mx-auto border-4 border-[#95C11E] object-cover mb-4">
+        <h1 id="pName" class="text-4xl font-black uppercase">Loading...</h1>
+        <p id="pRole" class="text-[#95C11E] font-bold uppercase tracking-widest mt-2"></p>
+        
+        <div class="grid grid-cols-2 gap-4 mt-8 text-left border-t border-zinc-800 pt-8">
+            <p class="text-gray-400">Sport: <span id="pSport" class="text-white font-bold"></span></p>
+            <p class="text-gray-400">Location: <span id="pLoc" class="text-white font-bold"></span></p>
+            <p class="text-gray-400">Contact: <span id="pPhone" class="text-white font-bold"></span></p>
+            <p class="text-gray-400">Email: <span id="pEmail" class="text-white font-bold"></span></p>
+        </div>
+
+        <div class="mt-8 text-left">
+            <h3 class="text-[#95C11E] font-black uppercase text-sm mb-2">About / Bio</h3>
+            <p id="pBio" class="text-gray-300 leading-relaxed"></p>
+        </div>
+
+        <div class="mt-10 border-t border-zinc-800 pt-8 text-left">
+            <h3 class="text-[#95C11E] font-black uppercase text-sm mb-4">Chat with <span id="chatWith">User</span></h3>
+            
+            <div id="chatBox" class="bg-black p-4 rounded-xl h-64 overflow-y-auto mb-4 border border-zinc-800 text-xs space-y-3 flex flex-col">
+                <p class="text-zinc-600 italic text-center">Loading conversation...</p>
+            </div>
+
+            <div class="flex gap-2">
+                <input type="text" id="msgText" placeholder="Write a message..." class="flex-1 bg-zinc-800 p-3 rounded-lg outline-none text-sm border border-transparent focus:border-[#95C11E] transition">
+                <button onclick="sendMessage()" class="bg-[#95C11E] text-black px-6 py-3 rounded-lg font-black uppercase text-xs hover:scale-105 transition">Send</button>
+            </div>
+        </div>
+
+        <button onclick="window.history.back()" class="mt-10 text-xs font-bold text-gray-500 hover:text-white uppercase tracking-widest">← Back to Feed</button>
+    </div>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const userId = params.get('id');
+
+        async function loadUserProfile() {
+            try {
+                const res = await fetch(`http://localhost:5000/api/user/${userId}`);
+                const u = await res.json();
+
+                document.getElementById('pName').innerText = u.name;
+                document.getElementById('chatWith').innerText = u.name;
+                document.getElementById('pRole').innerText = u.role;
+                document.getElementById('pSport').innerText = u.sport || "N/A";
+                document.getElementById('pLoc').innerText = u.location || "N/A";
+                document.getElementById('pPhone').innerText = u.phone || "Not Shared";
+                document.getElementById('pEmail').innerText = u.email;
+                document.getElementById('pBio').innerText = u.bio || "No bio added yet.";
+                
+                if(u.profilePic) {
+                    document.getElementById('pImg').src = `http://localhost:5000${u.profilePic}`;
+                } else {
+                    document.getElementById('pImg').src = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+                }
+                
+                // Load messages as soon as profile is loaded
+                loadChat();
+            } catch (err) { console.error("Error loading profile:", err); }
+        }
+
+        // MESSAGE LOGIC
+        async function loadChat() {
+            const token = localStorage.getItem('token');
+            if(!token || !userId) return;
+
+            try {
+                const res = await fetch(`http://localhost:5000/api/messages/${userId}`, {
+                    headers: { 'x-auth-token': token }
+                });
+                const msgs = await res.json();
+                const box = document.getElementById('chatBox');
+                
+                if(msgs.length === 0) {
+                    box.innerHTML = "<p class='text-zinc-700 text-center py-4 uppercase font-bold tracking-tighter'>No messages yet. Start the conversation!</p>";
+                    return;
+                }
+
+                box.innerHTML = msgs.map(m => {
+                    const isMe = m.sender !== userId;
+                    return `
+                        <div class="max-w-[80%] ${isMe ? 'self-end text-right' : 'self-start text-left'}">
+                            <p class="text-[9px] font-black uppercase mb-1 ${isMe ? 'text-[#95C11E]' : 'text-zinc-500'}">${isMe ? 'Me' : 'Them'}</p>
+                            <p class="inline-block p-3 rounded-2xl text-sm ${isMe ? 'bg-[#95C11E] text-black rounded-tr-none' : 'bg-zinc-800 text-white rounded-tl-none'} shadow-lg">${m.text}</p>
+                        </div>
+                    `;
+                }).join('');
+                box.scrollTop = box.scrollHeight;
+            } catch (err) { console.error("Error loading chat:", err); }
+        }
+
+        async function sendMessage() {
+            const textInput = document.getElementById('msgText');
+            const text = textInput.value.trim();
+            const token = localStorage.getItem('token');
+            
+            if(!text || !token) return;
+
+            try {
+                const res = await fetch('http://localhost:5000/api/messages/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+                    body: JSON.stringify({ receiverId: userId, text })
+                });
+
+                if(res.ok) {
+                    textInput.value = "";
+                    loadChat(); // Immediate refresh
+                }
+            } catch (err) { console.error("Error sending message:", err); }
+        }
+
+        // Auto-refresh chat every 4 seconds for real-time feel
+        setInterval(loadChat, 4000);
+
+        // Initial Load
+        loadUserProfile();
+    </script>
+</body>
+</html>

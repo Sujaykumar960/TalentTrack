@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>TalentTrack - Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style> body { background-color: #000; color: white; font-family: sans-serif; } </style>
+</head>
+<body class="p-6">
+    <div id="trialModal" class="hidden fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
+        <div class="bg-zinc-900 border-2 border-[#95C11E] p-8 rounded-3xl w-full max-w-md shadow-2xl">
+            <h2 class="text-2xl font-black text-[#95C11E] mb-6 uppercase">Post a New Trial</h2>
+            <form id="trialForm" class="space-y-4 text-sm">
+                <input type="text" id="tTitle" placeholder="Trial Title" required class="w-full p-3 bg-zinc-800 rounded-lg outline-none">
+                <input type="text" id="tSport" placeholder="Sport" required class="w-full p-3 bg-zinc-800 rounded-lg outline-none">
+                <input type="text" id="tLoc" placeholder="Location" required class="w-full p-3 bg-zinc-800 rounded-lg outline-none">
+                <input type="date" id="tDate" required class="w-full p-3 bg-zinc-800 rounded-lg outline-none text-gray-400">
+                <textarea id="tDesc" placeholder="Requirements" class="w-full p-3 bg-zinc-800 rounded-lg h-24 outline-none"></textarea>
+                <div class="flex gap-3 pt-2">
+                    <button type="button" onclick="closeModal()" class="flex-1 bg-zinc-700 py-3 rounded-xl font-bold uppercase text-xs">Cancel</button>
+                    <button type="submit" class="flex-1 bg-[#95C11E] text-black py-3 rounded-xl font-black uppercase text-xs">Post Now</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-6">
+        <div class="md:col-span-3 bg-zinc-900 p-6 rounded-2xl border border-zinc-800 h-fit text-center">
+            
+            <div class="relative w-24 h-24 mx-auto mb-4 group cursor-pointer" onclick="document.getElementById('photoInput').click()">
+                <img id="profileImg" src="" class="w-full h-full rounded-full object-cover border-2 border-[#95C11E] hidden">
+                <div id="initialsCircle" class="w-full h-full bg-[#95C11E] rounded-full flex items-center justify-center text-black font-bold text-2xl">
+                    <span id="initials">U</span>
+                </div>
+                <div class="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                    <span class="text-[10px] font-bold">CHANGE</span>
+                </div>
+                <input type="file" id="photoInput" class="hidden" accept="image/*">
+            </div>
+
+            <h3 id="myName" class="text-xl font-bold">Loading...</h3>
+            <p id="myRole" class="text-[#95C11E] text-xs uppercase font-bold mt-1"></p>
+            <hr class="my-4 border-zinc-800">
+            <div class="text-left text-sm space-y-2 text-gray-400">
+                <p>Sport: <span id="mySport" class="text-white"></span></p>
+                <p>Location: <span id="myLoc" class="text-white"></span></p>
+            </div>
+            <button onclick="logout()" class="mt-6 text-red-500 text-xs font-bold hover:underline">LOGOUT</button>
+        </div>
+
+        <div class="md:col-span-6 space-y-6">
+            <div class="flex justify-between items-center">
+                <h2 class="text-2xl font-black text-[#95C11E] uppercase">Talent Feed</h2>
+                <button id="postBtn" onclick="openModal()" class="hidden bg-[#95C11E] text-black px-4 py-2 rounded-full text-[10px] font-black uppercase hover:scale-105 transition">
+                    + Post Trial
+                </button>
+            </div>
+
+            <div id="scoutDashboard" class="hidden space-y-4 bg-zinc-900 p-6 rounded-2xl border border-[#95C11E]">
+                <h3 class="text-lg font-bold uppercase">My Trials & Applicants</h3>
+                <div id="myTrialsList" class="space-y-4"></div>
+            </div>
+
+            <div id="feedContainer" class="grid grid-cols-1 gap-4"></div>
+        </div>
+
+        <div class="md:col-span-3 space-y-6">
+            <h2 class="text-xl font-black text-[#95C11E] uppercase">Trials & Camps</h2>
+            <div id="opportunities-list" class="space-y-4"></div>
+        </div>
+    </div>
+
+    <script>
+        function openModal() { document.getElementById('trialModal').classList.remove('hidden'); }
+        function closeModal() { document.getElementById('trialModal').classList.add('hidden'); }
+
+        async function init() {
+            const token = localStorage.getItem('token');
+            if (!token) { window.location.href = "login.html"; return; }
+
+            const me = await loadProfile(token);
+            if (me && me.role === 'scout') {
+                document.getElementById('postBtn').classList.remove('hidden');
+                document.getElementById('scoutDashboard').classList.remove('hidden');
+                loadScoutTrials(token);
+            }
+            
+            await loadFeed();
+            await loadOpportunities();
+        }
+
+        async function loadProfile(token) {
+            try {
+                const res = await fetch('http://localhost:5000/api/user/me', {
+                    headers: { 'x-auth-token': token }
+                });
+                const me = await res.json();
+                
+                document.getElementById('myName').innerText = me.name;
+                document.getElementById('myRole').innerText = me.role;
+                document.getElementById('mySport').innerText = me.sport || "N/A";
+                document.getElementById('myLoc').innerText = me.location || "N/A";
+                document.getElementById('initials').innerText = me.name[0];
+
+                if (me.profilePic) {
+                    const img = document.getElementById('profileImg');
+                    img.src = `http://localhost:5000${me.profilePic}`;
+                    img.classList.remove('hidden');
+                    document.getElementById('initialsCircle').classList.add('hidden');
+                }
+                return me;
+            } catch (err) { console.error("Profile Error:", err); }
+        }
+
+        document.getElementById('photoInput').onchange = async function(e) {
+            const file = e.target.files[0];
+            if(!file) return;
+            const formData = new FormData();
+            formData.append('profilePic', file);
+            const token = localStorage.getItem('token');
+            try {
+                const res = await fetch('http://localhost:5000/api/user/upload-photo', {
+                    method: 'POST',
+                    headers: { 'x-auth-token': token },
+                    body: formData
+                });
+                if(res.ok) { alert("Photo Uploaded!"); location.reload(); }
+            } catch(err) { alert("Upload failed!"); }
+        };
+
+        async function loadScoutTrials(token) {
+            try {
+                const res = await fetch('http://localhost:5000/api/my-trials', {
+                    headers: { 'x-auth-token': token }
+                });
+                const trials = await res.json();
+                const container = document.getElementById('myTrialsList');
+                container.innerHTML = trials.length === 0 ? "<p class='text-gray-500 text-sm'>No trials posted yet.</p>" : "";
+
+                trials.forEach(t => {
+                    let applicantNames = t.applicants.map(a => `
+                        <li class='text-[#95C11E] text-xs font-bold cursor-pointer hover:underline' onclick="window.location.href='profile.html?id=${a.userId._id}'">
+                            • ${a.userId.name} (${a.userId.sport})
+                        </li>`).join('');
+                    container.innerHTML += `
+                        <div class="bg-zinc-800 p-4 rounded-xl border border-zinc-700">
+                            <h4 class="font-bold text-white text-sm uppercase">${t.title}</h4>
+                            <p class="text-[10px] text-gray-500 mb-2">Applicants: ${t.applicants.length}</p>
+                            <ul class="space-y-1">${applicantNames || "<li class='text-gray-600 text-[10px] italic'>No applicants yet</li>"}</ul>
+                        </div>`;
+                });
+            } catch (err) { console.error(err); }
+        }
+
+        async function applyForTrial(id) {
+            const token = localStorage.getItem('token');
+            try {
+                const res = await fetch(`http://localhost:5000/api/opportunities/${id}/apply`, {
+                    method: 'POST',
+                    headers: { 'x-auth-token': token }
+                });
+                const data = await res.json();
+                alert(data.msg || data.error);
+            } catch (err) { console.error(err); }
+        }
+
+        async function loadFeed() {
+            const res = await fetch('http://localhost:5000/api/feed');
+            const users = await res.json();
+            const feed = document.getElementById('feedContainer');
+            feed.innerHTML = "";
+            users.forEach(u => {
+                feed.innerHTML += `
+                    <div class="bg-zinc-900 p-5 rounded-xl border border-zinc-800 hover:border-[#95C11E] transition cursor-pointer" onclick="window.location.href='profile.html?id=${u._id}'">
+                        <div class="flex items-center gap-4">
+                            <img src="${u.profilePic ? 'http://localhost:5000'+u.profilePic : 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" 
+                                 class="w-12 h-12 rounded-full object-cover border border-[#95C11E]">
+                            <div>
+                                <h4 class="font-bold text-lg text-white">${u.name}</h4>
+                                <p class="text-[#95C11E] text-xs font-bold uppercase">${u.sport} • ${u.role}</p>
+                            </div>
+                        </div>
+                        <p class="text-gray-400 text-sm mt-3">${u.bio || "Click to view full profile."}</p>
+                    </div>`;
+            });
+        }
+
+        async function loadOpportunities() {
+            const res = await fetch('http://localhost:5000/api/all-opportunities');
+            const opps = await res.json();
+            const container = document.getElementById('opportunities-list');
+            container.innerHTML = opps.length === 0 ? "<p class='text-gray-500 text-sm'>No trials posted yet.</p>" : "";
+
+            opps.forEach(opt => {
+                container.innerHTML += `
+                    <div class="bg-zinc-900 p-4 rounded-xl border-l-4 border-[#95C11E]">
+                        <h4 class="font-bold text-white text-sm">${opt.title}</h4>
+                        <p class="text-[10px] text-[#95C11E] font-bold uppercase">${opt.sport} • ${opt.location}</p>
+                        <div class="flex justify-between items-center mt-3 pt-2 border-t border-zinc-800">
+                            <span class="text-[9px] text-gray-500">${opt.date}</span>
+                            <button onclick="event.stopPropagation(); applyForTrial('${opt._id}')" class="bg-[#95C11E] text-black text-[9px] font-black px-3 py-1 rounded-full uppercase hover:scale-105 transition">Apply</button>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        document.getElementById('trialForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const token = localStorage.getItem('token');
+            const data = {
+                title: document.getElementById('tTitle').value, sport: document.getElementById('tSport').value,
+                location: document.getElementById('tLoc').value, date: document.getElementById('tDate').value,
+                description: document.getElementById('tDesc').value
+            };
+            const res = await fetch('http://localhost:5000/api/opportunities', {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+                body: JSON.stringify(data)
+            });
+            if (res.ok) { alert("Trial Posted!"); closeModal(); loadOpportunities(); }
+        });
+
+        function logout() { localStorage.clear(); window.location.href="login.html"; }
+        init();
+    </script>
+</body>
+</html>

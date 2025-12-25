@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TalentTrack - Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Montserrat', sans-serif; background-color: #000; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-6">
+
+    <div class="bg-zinc-900 border-2 border-[#95C11E] p-10 rounded-3xl w-full max-w-md shadow-2xl">
+        <h1 class="text-4xl font-black text-[#95C11E] mb-2 text-center uppercase tracking-tighter">Welcome Back</h1>
+        <p class="text-gray-400 text-center mb-8">Login to your TalentTrack account</p>
+
+        <form id="loginForm" class="flex flex-col gap-5">
+            <div>
+                <label class="text-xs font-bold uppercase text-gray-500 ml-1">Gmail / Email</label>
+                <input type="email" id="email" placeholder="email@gmail.com" required 
+                class="w-full p-4 bg-zinc-800 border border-zinc-700 rounded-xl focus:border-[#95C11E] outline-none text-white transition">
+            </div>
+
+            <div>
+                <label class="text-xs font-bold uppercase text-gray-500 ml-1">Password</label>
+                <input type="password" id="password" placeholder="••••••••" required 
+                class="w-full p-4 bg-zinc-800 border border-zinc-700 rounded-xl focus:border-[#95C11E] outline-none text-white transition">
+            </div>
+
+            <button type="submit" 
+            class="w-full bg-[#95C11E] text-black font-black py-4 rounded-full hover:scale-105 transition-transform uppercase tracking-widest mt-2">
+            Sign In
+            </button>
+        </form>
+
+        <div class="mt-8 text-center border-t border-zinc-800 pt-6">
+            <p class="text-sm text-gray-500">
+                Don't have an account? <a href="signup.html" class="text-[#95C11E] font-bold hover:underline">Register Now</a>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const loginData = {
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value
+            };
+
+            try {
+                // Backend API call
+                const response = await fetch('http://localhost:5000/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(loginData)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    // Token aur User info save karein
+                    localStorage.setItem('token', result.token);
+                    localStorage.setItem('user', JSON.stringify(result.user));
+                    
+                    alert("Login Successful!");
+                    window.location.href = "dashboard.html"; // Home page par bhej dega
+                } else {
+                    alert("Error: " + result.error);
+                }
+            } catch (err) {
+                console.error("Login failed:", err);
+                alert("Cannot connect to server. Is your backend running?");
+            }
+        });
+    </script>
+</body>
+</html>

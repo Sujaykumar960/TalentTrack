@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TalentTrack - Join the Field</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Montserrat', sans-serif; }
+        .bg-gradient { background: linear-gradient(to bottom right, #000000, #111111); }
+    </style>
+</head>
+<body class="bg-gradient min-h-screen flex items-center justify-center p-6 text-white">
+
+    <div class="bg-zinc-900 border-2 border-[#95C11E] p-8 rounded-3xl w-full max-w-lg shadow-2xl">
+        <h1 class="text-4xl font-black text-[#95C11E] mb-2 text-center uppercase">Join Now</h1>
+        <p class="text-gray-400 text-center mb-8">Bridging Rural Talent & Global Opportunity</p>
+
+        <form id="signupForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="md:col-span-2">
+                <input type="text" id="name" placeholder="Full Name" required 
+                class="w-full p-3 bg-zinc-800 border border-zinc-700 rounded-lg focus:border-[#95C11E] outline-none transition">
+            </div>
+
+            <div class="md:col-span-2">
+                <input type="email" id="email" placeholder="Gmail Address" required 
+                class="w-full p-3 bg-zinc-800 border border-zinc-700 rounded-lg focus:border-[#95C11E] outline-none transition">
+            </div>
+
+            <div>
+                <input type="tel" id="phone" placeholder="Phone Number" required 
+                class="w-full p-3 bg-zinc-800 border border-zinc-700 rounded-lg focus:border-[#95C11E] outline-none transition">
+            </div>
+
+            <div>
+                <input type="number" id="age" placeholder="Age" required 
+                class="w-full p-3 bg-zinc-800 border border-zinc-700 rounded-lg focus:border-[#95C11E] outline-none transition">
+            </div>
+
+            <div>
+                <input type="text" id="location" placeholder="City/Village" required 
+                class="w-full p-3 bg-zinc-800 border border-zinc-700 rounded-lg focus:border-[#95C11E] outline-none transition">
+            </div>
+
+            <div>
+                <input type="text" id="sport" placeholder="Sports Name" required 
+                class="w-full p-3 bg-zinc-800 border border-zinc-700 rounded-lg focus:border-[#95C11E] outline-none transition">
+            </div>
+
+            <div class="md:col-span-2">
+                <select id="role" class="w-full p-3 bg-zinc-800 border border-zinc-700 rounded-lg focus:border-[#95C11E] outline-none transition">
+                    <option value="athlete">I am an Athlete (Player)</option>
+                    <option value="scout">I am a Scout/Coach</option>
+                </select>
+            </div>
+
+            <div class="md:col-span-2">
+                <input type="password" id="password" placeholder="Create Password" required 
+                class="w-full p-3 bg-zinc-800 border border-zinc-700 rounded-lg focus:border-[#95C11E] outline-none transition">
+            </div>
+
+            <div class="md:col-span-2 mt-4">
+                <button type="submit" 
+                class="w-full bg-[#95C11E] text-black font-black py-4 rounded-full hover:scale-105 transition-transform uppercase tracking-widest">
+                Create Account
+                </button>
+            </div>
+        </form>
+
+        <p class="text-center mt-6 text-sm text-gray-500">
+            Already have an account? <a href="login.html" class="text-[#95C11E] hover:underline">Login here</a>
+        </p>
+    </div>
+
+    <script>
+        document.getElementById('signupForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const userData = {
+                name: document.getElementById('name').value,
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value,
+                phone: document.getElementById('phone').value,
+                age: document.getElementById('age').value,
+                location: document.getElementById('location').value,
+                sport: document.getElementById('sport').value,
+                role: document.getElementById('role').value
+            };
+
+            try {
+                const response = await fetch('http://localhost:5000/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(userData)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    alert("Account Created! Redirecting to login...");
+                    window.location.href = "login.html";
+                } else {
+                    alert("Error: " + result.error);
+                }
+            } catch (err) {
+                console.error("Signup failed:", err);
+                alert("Server unreachable. Make sure backend is running!");
+            }
+        });
+    </script>
+</body>
+</html>
